@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 		end = MPI_Wtime();
 		
 		//printf("Sum: %f\n", sum);
-		printf("%f\n", sum, end - start); // Time in seconds
+		printf("%f\n", end - start); // Time in seconds
 	} else {
 		MPI_Send(&sum, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 	}

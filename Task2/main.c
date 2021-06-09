@@ -14,8 +14,9 @@ int main(int argc, char **argv)
 {
 	// First Initialization
 	unsigned long long int N = atoll(argv[1]);
-    double T = atoll(argv[2]);
-	double a = A;
+	char *eptr;
+    double T = strtod(argv[2], &eptr);
+    double a = A;
 	double b = B;
     double l = L;
 	double c = C;
@@ -36,8 +37,10 @@ int main(int argc, char **argv)
 	// will allocate memory which can be put into one cacheline of each proccessor 
 	int Nk = N / size; // Need to fix, because may be some problems with 10/3 for examples
 	
-	if (rank == 0 || rank == size - 1) {
+	if (rank == 0) {
 		Nk = Nk+1;	
+	} else if (rank == size - 1) {
+		Nk = N - Nk * size + 1;
 	} else {
 		Nk = Nk+2;
 	}
