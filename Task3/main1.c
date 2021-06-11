@@ -11,6 +11,10 @@
 int main(int argc, char **argv)
 {
 	// Initialization
+    if (argc < 2) {
+		printf("Too few arguments!\n");
+		return 1;
+	}
 	int n = atoll(argv[1]);
 	double a = LEFT_BORDER;
 	double b = RIGHT_BORDER;

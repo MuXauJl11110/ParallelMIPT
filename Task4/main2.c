@@ -14,6 +14,10 @@
 int main(int argc, char **argv)
 {
 	// First Initialization
+    if (argc < 3) {
+		printf("Too few arguments!\n");
+		return 1;
+	}
 	unsigned long long int N = atoll(argv[1]);
     char *eptr;
     double T = strtod(argv[2], &eptr);
@@ -49,7 +53,7 @@ int main(int argc, char **argv)
     start = omp_get_wtime(); 
     #pragma omp parallel private(i)
     {
-        for (i = 0; i < T; i++) {
+        for (i = 0; i * tau < T; i++) {
             #pragma omp for schedule (dynamic, chunk_size)
             for (j = 1; j < N - 1; j++) {
                 u1[j] = u0[j] + inv * (u0[j-1] - 2 * u0[j] + u0[j+1]);

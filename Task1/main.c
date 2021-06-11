@@ -11,11 +11,18 @@
 int main(int argc, char **argv)
 {
 	// Initialization
+	if (argc < 2) {
+		printf("Too few arguments!\n");
+		return 1;
+	}
 	unsigned long long int n = atoll(argv[1]);
 	double a = LEFT_BORDER;
 	double b = RIGHT_BORDER;
 	// Grid step
 	double h = (b - a) / n;
+
+	// Time measuring
+	double start, end;
 	
 	MPI_Init(&argc, &argv);
 	int rank, size;
@@ -24,8 +31,7 @@ int main(int argc, char **argv)
 
 	double sum = 0;
 	double received_sum = 0;
-	double start, end;
-
+	
 	if (rank == 0) {
 		start = MPI_Wtime();
 	}
@@ -47,7 +53,7 @@ int main(int argc, char **argv)
 		end = MPI_Wtime();
 		
 		//printf("Sum: %f\n", sum);
-		printf("%f\n", end - start); // Time in seconds
+		printf("%f", end - start); // Time in seconds
 	} else {
 		MPI_Send(&sum, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 	}
