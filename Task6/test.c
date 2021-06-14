@@ -92,7 +92,7 @@ double f(double x)
 }
 
 // Function calculating an integral
-double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
+double IntLocalStack(double A, double B, double epsilon, struct Stack* stack, int local_stack_size)
 {
     double I = 0; // Integral value
     int tick = 0;
@@ -109,7 +109,9 @@ double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
         double sab = 0, sac = 0, scb = 0, sabc = 0;
         sab = (fa + fb) * (b - a) / 2;
         int is_empty = 0;
-
+        struct Stack* local_push_stack = createStack(local_stack_size);
+        //struct Stack* local_pop_stack = createStack(local_stack_size);
+        
         Item *item;
         item = (Item*)malloc(sizeof(Item));
         while(1) {
@@ -124,8 +126,7 @@ double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
                 item->fa = fa;
                 item->fb = fc;
                 item->sab = sac;
-                #pragma omp critical
-                push(stack, *item);
+                push(local_push_stack, *item);
                 a = c; 
                 fa = fc;
                 sab = scb;
@@ -136,13 +137,22 @@ double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
                     sabc = 0;
                 }
                 I += sabc;
-                #pragma omp critical
-                is_empty = isEmpty(stack);
-                if (is_empty) {
-                    break;
+                // Local stack is empty
+                if (isEmpty(local_push_stack)) {
+                    #pragma omp critical
+                    is_empty = isEmpty(stack);
+                    if (is_empty) {
+                        break;
+                    } else {
+                        #pragma omp critical
+                        {
+                            while ((isFull(local_push_stack) != 1) && (pop(stack, item) != INT_MIN)) {
+                                push(local_push_stack, *item);
+                            }
+                        }
+                    }
                 }
-                #pragma omp critical
-                pop(stack, item);
+                pop(local_push_stack, item);
                 a = item->a;
                 b = item->b;
                 fa = item->fa;
@@ -150,8 +160,20 @@ double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
                 sab = item->sab;
             }
             tick++;
+            // If local stack is full
+            if (isFull(local_push_stack)) {
+                #pragma omp critical
+                {
+                    for (int i = 0; i < local_stack_size; i++)
+                        push(stack, local_push_stack->array[i]);
+                }
+                local_push_stack->top = -1;
+                //printf("Pushed from %d\n", rank);
+            }
         }
-        //printf("%d\n", rank);
+        deleteStack(local_push_stack);
+        //deleteStack(local_pop_stack);
+        //printf("%d %d\n", rank, tick);
         free(item);
     }
     //printf("%d\n", tick);
@@ -172,9 +194,9 @@ int main(int argc, char **argv)
     double start, end;
     
     start = omp_get_wtime();
-    double result = IntLocalStack(0.0001, 1.0, eps, stack);
+    double result = IntLocalStack(0.0001, 1.0, eps, stack, 8);
     end = omp_get_wtime();
-    printf("%lf\n", result);
+    //printf("%lf\n", result);
     printf("%lf\n", end - start);
 
     deleteStack(stack);

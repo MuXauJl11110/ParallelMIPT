@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <omp.h>
  
 typedef struct item {
     double a;
@@ -92,90 +91,55 @@ double f(double x)
 }
 
 // Function calculating an integral
-double IntLocalStack(double A, double B, double epsilon, struct Stack* stack)
+double IntLocalStack(double a, double b, double epsilon, struct Stack* stack)
 {
     double I = 0; // Integral value
-    int tick = 0;
-    #pragma omp parallel reduction(+: I, tick)
-    {
-        int size = omp_get_num_threads();
-        int rank = omp_get_thread_num();
-        double h = (B - A) / size;
-        double a = A + h * rank;
-        double b = a + h;
-        double fa = f(a), fb = f(b);
-        double fc = 0;
-        double c = 0; // Midpoint
-        double sab = 0, sac = 0, scb = 0, sabc = 0;
-        sab = (fa + fb) * (b - a) / 2;
-        int is_empty = 0;
+    double fa = f(a), fb = f(b);
+    double fc = 0;
+    double c = 0; // Midpoint
+    double sab = 0, sac = 0, scb = 0, sabc = 0;
+    sab = (fa + fb) * (b - a) / 2;
 
-        Item *item;
-        item = (Item*)malloc(sizeof(Item));
-        while(1) {
-            c = (a + b) / 2;
-            fc = f(c);
-            sac = (fa + fc) * (c - a) / 2;
-            scb = (fc + fb) * (b - c) / 2;
-            sabc = sac + scb;
-            if(fabs(sab - sabc) > epsilon * fabs(sabc)) {
-                item->a = a;
-                item->b = c;
-                item->fa = fa;
-                item->fb = fc;
-                item->sab = sac;
-                #pragma omp critical
-                push(stack, *item);
-                a = c; 
-                fa = fc;
-                sab = scb;
-            } else {
-                // Checking if I not Nan
-                if (sabc != sabc) {
-                    //printf("Nan was caught at %d!\n", rank);
-                    sabc = 0;
-                }
-                I += sabc;
-                #pragma omp critical
-                is_empty = isEmpty(stack);
-                if (is_empty) {
-                    break;
-                }
-                #pragma omp critical
-                pop(stack, item);
-                a = item->a;
-                b = item->b;
-                fa = item->fa;
-                fb = item->fb;
-                sab = item->sab;
+    Item *item;
+    item = (Item*)malloc(sizeof(Item));
+    while(1) {
+        c = (a + b) / 2;
+        fc = f(c);
+        sac = (fa + fc) * (c - a) / 2;
+        scb = (fc + fb) * (b - c) / 2;
+        sabc = sac + scb;
+        if(abs(sab - sabc) > epsilon * abs(sabc)) {
+            item->a = a;
+            item->b = c;
+            item->fa = fa;
+            item->fb = fc;
+            item->sab = sac;
+            push(stack, *item);
+            a = c; 
+            fa = fc;
+            sab = scb;
+        } else {
+            I += sabc;
+            if (isEmpty(stack)) {
+                break;
             }
-            tick++;
+            pop(stack, item);
+            a = item->a;
+            b = item->b;
+            fa = item->fa;
+            fb = item->fb;
+            sab = item->sab;
         }
-        //printf("%d\n", rank);
-        free(item);
     }
-    //printf("%d\n", tick);
     return I;
 }
  
 // Driver program to test above functions
-int main(int argc, char **argv)
+int main()
 {
-    if (argc < 2) {
-		printf("Too few arguments!\n");
-		return 1;
-	}
-	char *eptr;
-    double eps = strtod(argv[1], &eptr);
     struct Stack* stack = createStack(5000);
-
-    double start, end;
     
-    start = omp_get_wtime();
-    double result = IntLocalStack(0.0001, 1.0, eps, stack);
-    end = omp_get_wtime();
-    printf("%lf\n", result);
-    printf("%lf\n", end - start);
+    printf("%lf\n", IntLocalStack(0.0001, 1.0, 0.0000000001, stack));
 
     deleteStack(stack);
     
